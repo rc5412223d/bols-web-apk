@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Apply Google Services only when the project's own Firebase file is present.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'org.bols.minecraft'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'org.bols.minecraft'
+        minSdk 24
+        targetSdk 35
+        versionCode 3
+        versionName '1.2.0'
+    }
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:35.0.2')
+    implementation 'com.google.firebase:firebase-messaging'
+}
