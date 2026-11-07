@@ -54,6 +54,7 @@ public class MainActivity extends Activity {
         showTab("首頁");
         askNotificationPermission();
         if(!session.isEmpty()) registerCurrentPushToken();
+        handleAuthIntent(getIntent());
     }
 
     private void buildShell() {
@@ -324,8 +325,8 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},1202);
     }
 
-    @Override protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent); setIntent(intent);
+    private void handleAuthIntent(Intent intent) {
+        if(intent==null) return;
         Uri data=intent.getData();
         if(data!=null && "bolsminecraft".equals(data.getScheme()) && "auth".equals(data.getHost())) {
             String code=data.getQueryParameter("code");
@@ -335,5 +336,10 @@ public class MainActivity extends Activity {
                 exchangeAppLoginCode(code);
             }
         }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent); setIntent(intent);
+        handleAuthIntent(intent);
     }
 }
