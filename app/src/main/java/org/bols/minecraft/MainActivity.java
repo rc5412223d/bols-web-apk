@@ -28,6 +28,8 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 
 public class MainActivity extends Activity {
@@ -51,6 +53,7 @@ public class MainActivity extends Activity {
         buildShell();
         showTab("首頁");
         askNotificationPermission();
+        if(!session.isEmpty()) registerCurrentPushToken();
     }
 
     private void buildShell() {
@@ -176,6 +179,30 @@ public class MainActivity extends Activity {
 
 
 
+
+    private void registerCurrentPushToken() {
+        try {
+            if(FirebaseApp.getApps(this).isEmpty()) return;
+            FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+                if(token==null || token.isEmpty() || session.isEmpty()) return;
+                new Thread(() -> {
+                    HttpURLConnection connection=null;
+                    try {
+                        connection=(HttpURLConnection)new URL(API+"/api/push/device/register").openConnection();
+                        connection.setRequestMethod("POST"); connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
+                        connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                        connection.setRequestProperty("Authorization","Bearer "+session);
+                        JSONObject payload=new JSONObject(); payload.put("token",token);
+                        try(OutputStream os=connection.getOutputStream()){os.write(payload.toString().getBytes("UTF-8"));}
+                        int status=connection.getResponseCode();
+                        if(status<200||status>=300) android.util.Log.w("BolsPush","Token registration HTTP "+status);
+                    } catch(Exception e){android.util.Log.w("BolsPush","Token registration failed",e);}
+                    finally{if(connection!=null)connection.disconnect();}
+                }).start();
+            });
+        } catch(Exception e){android.util.Log.w("BolsPush","Firebase is not ready",e);}
+    }
+
     private void loadChat(String channel, LinearLayout target) {
         target.removeAllViews();
         target.addView(txt("載入中…",12,MUTED,false));
@@ -261,7 +288,7 @@ public class MainActivity extends Activity {
                 String name=user.optString("name",user.optString("email","玩家"));
                 getPreferences(MODE_PRIVATE).edit().putString("session",token).putString("name",name).apply();
                 runOnUiThread(() -> {
-                    session=token; userName=name; buildShell(); showTab("首頁");
+                    session=token; userName=name; buildShell(); showTab("首頁"); registerCurrentPushToken();
                     Toast.makeText(this,"登入成功，歡迎回來！",Toast.LENGTH_LONG).show();
                 });
             } catch(Exception e) {
