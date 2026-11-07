@@ -13,16 +13,21 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 
 public class MainActivity extends Activity {
@@ -112,13 +117,30 @@ public class MainActivity extends Activity {
             body.addView(txt("聊天室",24,WHITE,true)); body.addView(txt("伺服器聊天頻道",12,MUTED,false)); addSpace(14);
             if(session.isEmpty()) requireLogin();
             else {
-                LinearLayout p=panel(); p.addView(txt("聊天服務連線",16,WHITE,true));
-                p.addView(txt("原生聊天室介面已建立；下一階段會接上 Worker 的歷史訊息與即時 WebSocket。",13,MUTED,false)); body.addView(p);
+                LinearLayout tools=new LinearLayout(this); tools.setGravity(Gravity.CENTER_VERTICAL);
+                TextView hint=txt("伺服器聊天",13,MUTED,false); tools.addView(hint,new LinearLayout.LayoutParams(0,-2,1));
+                Button refresh=button("重新整理"); tools.addView(refresh); body.addView(tools);
+                LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL);
+                body.addView(messages,new LinearLayout.LayoutParams(-1,0,1));
+                LinearLayout composer=new LinearLayout(this); composer.setGravity(Gravity.CENTER_VERTICAL);
+                EditText input=new EditText(this); input.setSingleLine(true); input.setTextColor(WHITE);
+                input.setHintTextColor(MUTED); input.setHint("輸入訊息…"); input.setTextSize(14);
+                input.setBackground(round(PANEL,dp(13))); input.setPadding(dp(12),dp(8),dp(12),dp(8));
+                composer.addView(input,new LinearLayout.LayoutParams(0,dp(48),1));
+                Button send=button("傳送"); LinearLayout.LayoutParams sendLp=new LinearLayout.LayoutParams(-2,dp(48)); sendLp.leftMargin=dp(8); composer.addView(send,sendLp);
+                LinearLayout.LayoutParams composerLp=new LinearLayout.LayoutParams(-1,-2); composerLp.topMargin=dp(8); body.addView(composer,composerLp);
+                refresh.setOnClickListener(v->loadChat("server",messages));
+                send.setOnClickListener(v->{String value=input.getText().toString().trim(); if(!value.isEmpty()){input.setText(""); postChat(value,messages);}});
+                loadChat("server",messages);
             }
         } else if(tab.equals("公告")) {
             body.addView(txt("伺服器公告",24,WHITE,true)); body.addView(txt("更新、活動與重要通知",12,MUTED,false)); addSpace(14);
             if(session.isEmpty()) requireLogin();
-            else { LinearLayout p=panel(); p.addView(txt("公告列表",16,WHITE,true)); p.addView(txt("公告 API 串接將在下一階段完成。",13,MUTED,false)); body.addView(p); }
+            else {
+                LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL);
+                body.addView(messages,new LinearLayout.LayoutParams(-1,-1));
+                loadChat("announcement",messages);
+            }
         } else {
             body.addView(txt("個人中心",24,WHITE,true)); body.addView(txt("帳號與應用程式設定",12,MUTED,false)); addSpace(14);
             LinearLayout p=panel();
@@ -152,6 +174,62 @@ public class MainActivity extends Activity {
         catch(Exception e){ Toast.makeText(this,"無法開啟 Google 登入。",Toast.LENGTH_LONG).show(); }
     }
 
+
+
+    private void loadChat(String channel, LinearLayout target) {
+        target.removeAllViews();
+        target.addView(txt("載入中…",12,MUTED,false));
+        new Thread(() -> {
+            HttpURLConnection connection=null;
+            try {
+                URL url=new URL(API+"/api/chat?channel="+channel);
+                connection=(HttpURLConnection)url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
+                connection.setRequestProperty("Authorization","Bearer "+session);
+                int status=connection.getResponseCode();
+                BufferedReader reader=new BufferedReader(new InputStreamReader(status>=200&&status<300?connection.getInputStream():connection.getErrorStream(),"UTF-8"));
+                StringBuilder raw=new StringBuilder(); String line; while((line=reader.readLine())!=null)raw.append(line); reader.close();
+                if(status<200||status>=300)throw new Exception("HTTP "+status);
+                JSONObject data=new JSONObject(raw.toString()); JSONArray items=data.optJSONArray("messages");
+                runOnUiThread(() -> {
+                    target.removeAllViews();
+                    if(items==null||items.length()==0){target.addView(txt("目前還沒有訊息。",13,MUTED,false));return;}
+                    for(int i=0;i<items.length();i++){
+                        JSONObject m=items.optJSONObject(i); if(m==null)continue;
+                        JSONObject u=m.optJSONObject("user"); String who=u==null?"玩家":u.optString("name","玩家");
+                        String message=m.optString("text","");
+                        LinearLayout card=panel(); card.addView(txt(who,12,MINT,true));
+                        card.addView(txt(message,14,WHITE,false));
+                        long time=m.optLong("createdAt",0);
+                        if(time>0)card.addView(txt(new SimpleDateFormat("MM/dd HH:mm",Locale.getDefault()).format(new Date(time)),10,MUTED,false));
+                        target.addView(card);
+                    }
+                });
+            } catch(Exception e) {
+                runOnUiThread(() -> {target.removeAllViews();target.addView(txt("讀取失敗："+e.getMessage(),12,Color.rgb(255,150,150),false));});
+            } finally {if(connection!=null)connection.disconnect();}
+        }).start();
+    }
+
+    private void postChat(String message, LinearLayout target) {
+        new Thread(() -> {
+            HttpURLConnection connection=null;
+            try {
+                URL url=new URL(API+"/api/chat");
+                connection=(HttpURLConnection)url.openConnection();
+                connection.setRequestMethod("POST"); connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
+                connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                connection.setRequestProperty("Authorization","Bearer "+session);
+                JSONObject payload=new JSONObject(); payload.put("channel","server"); payload.put("text",message);
+                try(OutputStream os=connection.getOutputStream()){os.write(payload.toString().getBytes("UTF-8"));}
+                int status=connection.getResponseCode();
+                if(status<200||status>=300)throw new Exception("HTTP "+status);
+                runOnUiThread(() -> loadChat("server",target));
+            } catch(Exception e) {runOnUiThread(() -> Toast.makeText(this,"傳送失敗："+e.getMessage(),Toast.LENGTH_LONG).show());}
+            finally {if(connection!=null)connection.disconnect();}
+        }).start();
+    }
 
     private void exchangeAppLoginCode(String code) {
         new Thread(() -> {
