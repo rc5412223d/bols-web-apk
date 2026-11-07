@@ -123,7 +123,7 @@ public class MainActivity extends Activity {
         header.addView(names, new LinearLayout.LayoutParams(0, -2, 1));
 
         TextView online = new TextView(this);
-        online.setText("● ONLINE");
+        online.setText("● APP");
         online.setTextColor(Color.rgb(175, 243, 206));
         online.setTextSize(10);
         online.setTypeface(Typeface.DEFAULT_BOLD);
