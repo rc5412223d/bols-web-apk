@@ -2,7 +2,6 @@ package org.bols.minecraft;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -13,22 +12,25 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.view.Window;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends Activity {
     private static final int BG=Color.rgb(8,16,18), PANEL=Color.rgb(18,34,34);
     private static final int PANEL2=Color.rgb(25,47,43), MINT=Color.rgb(125,238,183);
     private static final int WHITE=Color.rgb(239,248,244), MUTED=Color.rgb(151,177,168);
     private static final String AUTH="https://auth.bols.dpdns.org/login?client=android";
+    private static final String API="https://auth.bols.dpdns.org";
     private LinearLayout root, body, nav;
     private String active="首頁";
     private String userName="";
@@ -150,6 +152,46 @@ public class MainActivity extends Activity {
         catch(Exception e){ Toast.makeText(this,"無法開啟 Google 登入。",Toast.LENGTH_LONG).show(); }
     }
 
+
+    private void exchangeAppLoginCode(String code) {
+        new Thread(() -> {
+            HttpURLConnection connection=null;
+            try {
+                URL url=new URL(API+"/api/app-auth/exchange");
+                connection=(HttpURLConnection)url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(15000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                JSONObject payload=new JSONObject(); payload.put("code",code);
+                try(OutputStream os=connection.getOutputStream()) {
+                    os.write(payload.toString().getBytes("UTF-8"));
+                }
+                int status=connection.getResponseCode();
+                BufferedReader reader=new BufferedReader(new InputStreamReader(
+                    status>=200 && status<300 ? connection.getInputStream() : connection.getErrorStream(),"UTF-8"));
+                StringBuilder response=new StringBuilder(); String line;
+                while((line=reader.readLine())!=null) response.append(line);
+                reader.close();
+                if(status<200 || status>=300) throw new Exception("HTTP "+status);
+                JSONObject data=new JSONObject(response.toString());
+                if(!data.optBoolean("ok")) throw new Exception(data.optString("error","登入交換失敗"));
+                String token=data.optString("session","");
+                JSONObject user=data.optJSONObject("user");
+                if(token.isEmpty() || user==null) throw new Exception("伺服器回傳資料不完整");
+                String name=user.optString("name",user.optString("email","玩家"));
+                getPreferences(MODE_PRIVATE).edit().putString("session",token).putString("name",name).apply();
+                runOnUiThread(() -> {
+                    session=token; userName=name; buildShell(); showTab("首頁");
+                    Toast.makeText(this,"登入成功，歡迎回來！",Toast.LENGTH_LONG).show();
+                });
+            } catch(Exception e) {
+                runOnUiThread(() -> Toast.makeText(this,"登入交換失敗："+e.getMessage(),Toast.LENGTH_LONG).show());
+            } finally { if(connection!=null) connection.disconnect(); }
+        }).start();
+    }
+
     private void logout() {
         session=""; userName="";
         getPreferences(MODE_PRIVATE).edit().remove("session").remove("name").apply();
@@ -158,7 +200,7 @@ public class MainActivity extends Activity {
 
     private LinearLayout panel() {
         LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(16),dp(15),dp(16),dp(15));
-        p.setBackground(round(PANEL,dp(19))); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(10); body.addView(p,lp); return p;
+        p.setBackground(round(PANEL,dp(19))); return p;
     }
     private TextView txt(String s,int size,int color,boolean bold) {
         TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color);
@@ -182,8 +224,11 @@ public class MainActivity extends Activity {
         Uri data=intent.getData();
         if(data!=null && "bolsminecraft".equals(data.getScheme()) && "auth".equals(data.getHost())) {
             String code=data.getQueryParameter("code");
-            if(code==null) Toast.makeText(this,"登入回傳資料不完整。",Toast.LENGTH_LONG).show();
-            else Toast.makeText(this,"已返回 App，正在完成帳號驗證。",Toast.LENGTH_LONG).show();
+            if(code==null || code.isEmpty()) {
+                Toast.makeText(this,"登入回傳資料不完整。",Toast.LENGTH_LONG).show();
+            } else {
+                exchangeAppLoginCode(code);
+            }
         }
     }
 }
