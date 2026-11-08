@@ -940,7 +940,7 @@ public class MainActivity extends Activity {
                             if(status>=200 && status<300) {
                                 pushRegistrationStatus="已註冊（HTTP "+status+"）";
                             } else {
-                                pushRegistrationStatus="註冊失敗（HTTP "+status+")"
+                                pushRegistrationStatus="註冊失敗（HTTP "+status+"）"
                                     + (detail.isEmpty() ? "" : "：" + detail);
                             }
                         } catch(Exception e) {
@@ -1026,28 +1026,6 @@ public class MainActivity extends Activity {
             registerCurrentPushToken();
         });
         registerCurrentPushToken();
-    }
-
-    private void loadChat(String channel, LinearLayout target) {        try {
-            if(FirebaseApp.getApps(this).isEmpty()) return;
-            FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
-                if(token==null || token.isEmpty() || session.isEmpty()) return;
-                new Thread(() -> {
-                    HttpURLConnection connection=null;
-                    try {
-                        connection=(HttpURLConnection)new URL(API+"/api/push/device/register").openConnection();
-                        connection.setRequestMethod("POST"); connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
-                        connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=UTF-8");
-                        connection.setRequestProperty("Authorization","Bearer "+session);
-                        JSONObject payload=new JSONObject(); payload.put("token",token);
-                        try(OutputStream os=connection.getOutputStream()){os.write(payload.toString().getBytes("UTF-8"));}
-                        int status=connection.getResponseCode();
-                        if(status<200||status>=300) android.util.Log.w("BolsPush","Token registration HTTP "+status);
-                    } catch(Exception e){android.util.Log.w("BolsPush","Token registration failed",e);}
-                    finally{if(connection!=null)connection.disconnect();}
-                }).start();
-            });
-        } catch(Exception e){android.util.Log.w("BolsPush","Firebase is not ready",e);}
     }
 
     private void loadChat(String channel, LinearLayout target) {
