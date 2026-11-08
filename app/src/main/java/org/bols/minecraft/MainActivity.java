@@ -9,6 +9,8 @@ import android.media.AudioManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.text.util.Linkify;
+import android.text.method.LinkMovementMethod;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -910,7 +912,12 @@ public class MainActivity extends Activity {
                         JSONObject u=m.optJSONObject("user"); String who=u==null?"玩家":u.optString("name","玩家");
                         String message=m.optString("text","");
                         LinearLayout card=panel(); card.addView(txt(who,12,MINT,true));
-                        card.addView(txt(message,14,WHITE,false));
+                        TextView messageView = txt(message,14,WHITE,false);
+                        // Convert URLs in chat messages into tappable links.
+                        Linkify.addLinks(messageView,Linkify.WEB_URLS);
+                        messageView.setMovementMethod(LinkMovementMethod.getInstance());
+                        messageView.setLinkTextColor(MINT);
+                        card.addView(messageView);
                         long time=m.optLong("createdAt",0);
                         if(time>0)card.addView(txt(new SimpleDateFormat("MM/dd HH:mm",Locale.getDefault()).format(new Date(time)),10,MUTED,false));
                         target.addView(card);
