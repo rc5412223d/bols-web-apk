@@ -2,6 +2,9 @@ package org.bols.minecraft;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -88,6 +91,10 @@ public class MainActivity extends Activity {
     private boolean speakerEnabled = true;
     private String voicePeerId = "";
     private String voiceStatusMessage = "尚未加入語音";
+    private String pushFirebaseStatus = "尚未檢查";
+    private String pushTokenStatus = "尚未取得";
+    private String pushRegistrationStatus = "尚未註冊";
+    private AlertDialog pushDiagnosticDialog;
     private int previousAudioMode = AudioManager.MODE_NORMAL;
     private boolean previousSpeakerState = false;
     private static boolean webRtcInitialized = false;
@@ -226,7 +233,13 @@ public class MainActivity extends Activity {
             p.addView(txt(userName.isEmpty()?"尚未登入":userName,18,WHITE,true));
             p.addView(txt(session.isEmpty()?"登入後可使用聊天室與個人功能。":"已連結無垠伺服器帳號",12,MUTED,false));
             Button action=button(session.isEmpty()?"使用 Google 登入":"登出"); p.addView(action);
-            action.setOnClickListener(v->{if(session.isEmpty())startGoogleLogin();else logout();}); body.addView(p);
+            action.setOnClickListener(v->{if(session.isEmpty())startGoogleLogin();else logout();});
+            Button pushCheck=button("通知診斷 / 重新註冊");
+            LinearLayout.LayoutParams pushCheckLp=new LinearLayout.LayoutParams(-1,dp(48));
+            pushCheckLp.topMargin=dp(10);
+            p.addView(pushCheck,pushCheckLp);
+            pushCheck.setOnClickListener(v->showPushDiagnostics());
+            body.addView(p);
         }
     }
 
@@ -863,6 +876,159 @@ public class MainActivity extends Activity {
 
     private void registerCurrentPushToken() {
         try {
+            if(FirebaseApp.getApps(this).isEmpty()) {
+                pushFirebaseStatus = "未初始化：APK 沒有載入 Firebase 設定";
+                pushTokenStatus = "無法取得";
+                pushRegistrationStatus = "未註冊";
+                updatePushDiagnosticDialog();
+                android.util.Log.w("BolsPush","FirebaseApp is not initialized");
+                return;
+            }
+            pushFirebaseStatus = "已初始化";
+            updatePushDiagnosticDialog();
+            FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    if(token==null || token.trim().isEmpty()) {
+                        pushTokenStatus = "取得失敗：Firebase 回傳空 Token";
+                        pushRegistrationStatus = "未註冊";
+                        updatePushDiagnosticDialog();
+                        return;
+                    }
+                    String currentToken = token.trim();
+                    String tokenHint = currentToken.length() > 14
+                        ? currentToken.substring(0,8) + "…" + currentToken.substring(currentToken.length()-6)
+                        : "已取得";
+                    pushTokenStatus = "已取得（" + tokenHint + "）";
+                    if(session.isEmpty()) {
+                        pushRegistrationStatus = "尚未登入 App 帳號";
+                        updatePushDiagnosticDialog();
+                        return;
+                    }
+                    String authSession = session;
+                    pushRegistrationStatus = "正在向 Worker 註冊…";
+                    updatePushDiagnosticDialog();
+                    new Thread(() -> {
+                        HttpURLConnection connection=null;
+                        try {
+                            connection=(HttpURLConnection)new URL(API+"/api/push/device/register").openConnection();
+                            connection.setRequestMethod("POST");
+                            connection.setConnectTimeout(12000);
+                            connection.setReadTimeout(12000);
+                            connection.setDoOutput(true);
+                            connection.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                            connection.setRequestProperty("Authorization","Bearer "+authSession);
+                            JSONObject payload=new JSONObject();
+                            payload.put("token",currentToken);
+                            try(OutputStream os=connection.getOutputStream()) {
+                                os.write(payload.toString().getBytes("UTF-8"));
+                            }
+                            int status=connection.getResponseCode();
+                            java.io.InputStream stream = status>=200 && status<300
+                                ? connection.getInputStream() : connection.getErrorStream();
+                            StringBuilder responseText=new StringBuilder();
+                            if(stream!=null) {
+                                BufferedReader reader=new BufferedReader(new InputStreamReader(stream,"UTF-8"));
+                                String line;
+                                while((line=reader.readLine())!=null) responseText.append(line);
+                                reader.close();
+                            }
+                            String detail="";
+                            try {
+                                JSONObject data=new JSONObject(responseText.toString());
+                                detail=data.optString("error","");
+                            } catch(Exception ignored) {}
+                            if(status>=200 && status<300) {
+                                pushRegistrationStatus="已註冊（HTTP "+status+"）";
+                            } else {
+                                pushRegistrationStatus="註冊失敗（HTTP "+status+")"
+                                    + (detail.isEmpty() ? "" : "：" + detail);
+                            }
+                        } catch(Exception e) {
+                            pushRegistrationStatus="連線失敗："+(e.getMessage()==null?e.getClass().getSimpleName():e.getMessage());
+                            android.util.Log.w("BolsPush","Token registration failed",e);
+                        } finally {
+                            if(connection!=null) connection.disconnect();
+                            updatePushDiagnosticDialog();
+                        }
+                    }).start();
+                })
+                .addOnFailureListener(error -> {
+                    pushTokenStatus="取得失敗："+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());
+                    pushRegistrationStatus="未註冊";
+                    android.util.Log.w("BolsPush","FCM token retrieval failed",error);
+                    updatePushDiagnosticDialog();
+                });
+        } catch(Exception e) {
+            pushFirebaseStatus="初始化錯誤："+(e.getMessage()==null?e.getClass().getSimpleName():e.getMessage());
+            pushTokenStatus="無法取得";
+            pushRegistrationStatus="未註冊";
+            android.util.Log.w("BolsPush","Firebase is not ready",e);
+            updatePushDiagnosticDialog();
+        }
+    }
+
+    private String buildPushDiagnosticText() {
+        String permissionStatus;
+        if(Build.VERSION.SDK_INT>=33) {
+            permissionStatus=checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
+                ? "已允許" : "未允許（請到 Android 設定開啟通知）";
+        } else {
+            permissionStatus="此 Android 版本不需要額外通知權限";
+        }
+        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        if(manager!=null && !manager.areNotificationsEnabled()) {
+            permissionStatus += "；此 App 的系統通知目前已關閉";
+        }
+        if(Build.VERSION.SDK_INT>=26 && manager!=null) {
+            NotificationChannel channel=manager.getNotificationChannel("bols_server_notifications");
+            if(channel!=null && channel.getImportance()==NotificationManager.IMPORTANCE_NONE) {
+                permissionStatus += "；「無垠伺服器通知」頻道已被關閉";
+            }
+        }
+        return "Android 通知權限："+permissionStatus
+            + "\nFirebase："+pushFirebaseStatus
+            + "\nFCM Token："+pushTokenStatus
+            + "\nWorker 註冊："+pushRegistrationStatus
+            + "\n\n若顯示 HTTP 503，通常代表 Worker 尚未設定 FCM 服務帳戶；HTTP 401 代表登入工作階段未通過。";
+    }
+
+    private void updatePushDiagnosticDialog() {
+        runOnUiThread(() -> {
+            if(pushDiagnosticDialog!=null && pushDiagnosticDialog.isShowing()) {
+                pushDiagnosticDialog.setMessage(buildPushDiagnosticText());
+            }
+        });
+    }
+
+    private void showPushDiagnostics() {
+        pushDiagnosticDialog=new AlertDialog.Builder(this)
+            .setTitle("通知診斷")
+            .setMessage(buildPushDiagnosticText())
+            .setPositiveButton("重新檢查",null)
+            .setNegativeButton("關閉",null)
+            .create();
+        pushDiagnosticDialog.setOnShowListener(dialog -> {
+            Button retry=pushDiagnosticDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            retry.setOnClickListener(v -> {
+                pushFirebaseStatus="檢查中…";
+                pushTokenStatus="檢查中…";
+                pushRegistrationStatus="檢查中…";
+                pushDiagnosticDialog.setMessage(buildPushDiagnosticText());
+                registerCurrentPushToken();
+            });
+        });
+        pushDiagnosticDialog.show();
+        pushDiagnosticDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            pushFirebaseStatus="檢查中…";
+            pushTokenStatus="檢查中…";
+            pushRegistrationStatus="檢查中…";
+            updatePushDiagnosticDialog();
+            registerCurrentPushToken();
+        });
+        registerCurrentPushToken();
+    }
+
+    private void loadChat(String channel, LinearLayout target) {        try {
             if(FirebaseApp.getApps(this).isEmpty()) return;
             FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
                 if(token==null || token.isEmpty() || session.isEmpty()) return;
