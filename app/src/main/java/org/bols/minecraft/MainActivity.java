@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -300,9 +301,28 @@ public class MainActivity extends Activity {
 
     private void scrollChatToBottom(LinearLayout target) {
         if(chatScroll==null || target!=activeChatMessages) return;
-        target.post(()->{
+        target.post(() -> {
             ScrollView current = chatScroll;
-            if(current!=null) current.post(()->current.fullScroll(View.FOCUS_DOWN));
+            if(current == null || target != activeChatMessages) return;
+
+            // Wait until the message list has completed measuring/layout before
+            // calculating the scroll offset. This makes the chat open at the
+            // newest message even when the first network response arrives late.
+            ViewTreeObserver observer = current.getViewTreeObserver();
+            observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override public void onGlobalLayout() {
+                    if(current.getViewTreeObserver().isAlive()) {
+                        current.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    }
+                    if(chatScroll != current || activeChatMessages != target) return;
+                    View child = current.getChildAt(0);
+                    if(child != null) {
+                        int bottom = Math.max(0, child.getHeight() - current.getHeight());
+                        current.scrollTo(0, bottom);
+                    }
+                }
+            });
+            current.requestLayout();
         });
     }
 
