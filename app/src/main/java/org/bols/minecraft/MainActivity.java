@@ -64,9 +64,10 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 
 public class MainActivity extends Activity {
-    private static final int BG=Color.rgb(8,16,18), PANEL=Color.rgb(18,34,34);
-    private static final int PANEL2=Color.rgb(25,47,43), MINT=Color.rgb(125,238,183);
-    private static final int WHITE=Color.rgb(239,248,244), MUTED=Color.rgb(151,177,168);
+    private static final int BG=Color.rgb(10,13,25), PANEL=Color.rgb(20,26,44);
+    private static final int PANEL2=Color.rgb(31,40,64), MINT=Color.rgb(111,231,218);
+    private static final int WHITE=Color.rgb(243,246,255), MUTED=Color.rgb(155,166,193);
+    private static final int ACCENT=Color.rgb(164,137,255), BORDER=Color.rgb(48,59,88);
     private static final String AUTH="https://auth.bols.dpdns.org/login?client=android";
     private static final String API="https://auth.bols.dpdns.org";
     private LinearLayout root, body, nav;
@@ -118,199 +119,178 @@ public class MainActivity extends Activity {
 
     private void buildShell() {
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18),dp(10),dp(18),dp(12)); root.setBackgroundColor(BG);
+        root.setPadding(dp(18),dp(12),dp(18),dp(10)); root.setBackgroundColor(BG);
         LinearLayout header=new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView logo=new TextView(this); logo.setText("B"); logo.setTextColor(BG);
-        logo.setTextSize(22); logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD); logo.setGravity(Gravity.CENTER);
-        logo.setBackground(round(MINT,dp(15))); header.addView(logo,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        TextView logo=new TextView(this); logo.setText("B"); logo.setTextColor(BG); logo.setTextSize(22);
+        logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD); logo.setGravity(Gravity.CENTER);
+        logo.setBackground(gradient(MINT,ACCENT,dp(15))); header.addView(logo,new LinearLayout.LayoutParams(dp(44),dp(44)));
         LinearLayout brand=new LinearLayout(this); brand.setOrientation(LinearLayout.VERTICAL); brand.setPadding(dp(12),0,0,0);
-        TextView title=txt("無垠伺服器",19,WHITE,true); TextView sub=txt("BOLS COMMUNITY  ·  MINECRAFT",9,MUTED,false);
-        brand.addView(title); brand.addView(sub); header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
-        TextView status=txt(session.isEmpty()?"未登入":"已登入",11,MINT,true);
-        status.setPadding(dp(11),dp(8),dp(11),dp(8)); status.setBackground(round(PANEL2,dp(30))); header.addView(status);
+        brand.addView(txt("無垠伺服器",18,WHITE,true));
+        TextView sub=txt("COMMUNITY  /  MINECRAFT",9,MUTED,true); sub.setLetterSpacing(0.08f); brand.addView(sub);
+        header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout pill=new LinearLayout(this); pill.setGravity(Gravity.CENTER); pill.setPadding(dp(11),dp(8),dp(11),dp(8)); pill.setBackground(outline(PANEL2,BORDER,dp(30)));
+        View dot=new View(this); dot.setBackground(round(session.isEmpty()?MUTED:MINT,dp(8)));
+        LinearLayout.LayoutParams dotLp=new LinearLayout.LayoutParams(dp(7),dp(7)); dotLp.rightMargin=dp(6); pill.addView(dot,dotLp);
+        pill.addView(txt(session.isEmpty()?"訪客模式":"已登入",10,session.isEmpty()?MUTED:MINT,true)); header.addView(pill);
         root.addView(header);
-        View line=new View(this); line.setBackgroundColor(Color.rgb(38,65,59));
-        LinearLayout.LayoutParams lineLp=new LinearLayout.LayoutParams(-1,dp(1)); lineLp.setMargins(0,dp(13),0,dp(12)); root.addView(line,lineLp);
-        contentFrame=new FrameLayout(this);
-        root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
-        nav=new LinearLayout(this); nav.setGravity(Gravity.CENTER); nav.setPadding(dp(5),dp(7),dp(5),dp(7)); nav.setBackground(round(PANEL,dp(22)));
-        root.addView(nav,new LinearLayout.LayoutParams(-1,-2));
-        setContentView(root);
-        buildNav();
+        View line=new View(this); line.setBackgroundColor(BORDER);
+        LinearLayout.LayoutParams lineLp=new LinearLayout.LayoutParams(-1,dp(1)); lineLp.setMargins(0,dp(12),0,dp(10)); root.addView(line,lineLp);
+        contentFrame=new FrameLayout(this); root.addView(contentFrame,new LinearLayout.LayoutParams(-1,0,1));
+        nav=new LinearLayout(this); nav.setGravity(Gravity.CENTER); nav.setPadding(dp(5),dp(5),dp(5),dp(5));
+        nav.setBackground(outline(PANEL,Color.rgb(39,48,72),dp(22))); nav.setElevation(dp(8));
+        LinearLayout.LayoutParams navLp=new LinearLayout.LayoutParams(-1,-2); navLp.topMargin=dp(8); root.addView(nav,navLp);
+        setContentView(root); buildNav();
     }
 
     private void buildNav() {
         nav.removeAllViews();
-        String[][] items={{"首頁","⌂"},{"聊天室","▤"},{"語音","🎙"},{"公告","♢"},{"我的","●"}};
-        for(String[] item:items){
+        String[][] items={{"首頁","⌂"},{"聊天室","▤"},{"語音","◉"},{"公告","◇"},{"我的","●"}};
+        for(String[] item:items) {
+            boolean selected=active.equals(item[0]);
             LinearLayout cell=new LinearLayout(this); cell.setGravity(Gravity.CENTER); cell.setOrientation(LinearLayout.VERTICAL);
-            cell.setPadding(dp(3),dp(6),dp(3),dp(5));
-            boolean selected=active.equals(item[0]); cell.setBackground(round(selected?PANEL2:Color.TRANSPARENT,dp(15)));
-            TextView ico=txt(item[1],22,selected?MINT:MUTED,true); ico.setGravity(Gravity.CENTER);
+            cell.setPadding(dp(2),dp(7),dp(2),dp(6)); cell.setBackground(round(selected?PANEL2:Color.TRANSPARENT,dp(15)));
+            TextView icon=txt(item[1],20,selected?MINT:MUTED,true); icon.setGravity(Gravity.CENTER);
             TextView label=txt(item[0],10,selected?WHITE:MUTED,selected); label.setGravity(Gravity.CENTER);
-            cell.addView(ico); cell.addView(label); cell.setOnClickListener(v->showTab(item[0]));
-            nav.addView(cell,new LinearLayout.LayoutParams(0,dp(55),1));
+            cell.addView(icon); cell.addView(label); cell.setOnClickListener(v->showTab(item[0]));
+            nav.addView(cell,new LinearLayout.LayoutParams(0,dp(57),1));
         }
     }
 
     private void showTab(String tab) {
-        active=tab;
-        buildNav();
-        contentFrame.removeAllViews();
-        chatScroll=null;
-        activeChatMessages=null;
-        voiceStatusView=null;
-        voiceParticipantsView=null;
-        voiceJoinButton=null;
-        voiceMuteButton=null;
-        voiceSpeakerButton=null;
-        voiceLeaveButton=null;
-        if(tab.equals("聊天室")) {
-            showChatScreen();
-            return;
-        }
-        if(tab.equals("語音")) {
-            showVoiceScreen();
-            return;
-        }
-        body=new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        ScrollView pageScroll=new ScrollView(this);
-        pageScroll.setFillViewport(true);
-        pageScroll.addView(body);
+        active=tab; buildNav(); contentFrame.removeAllViews();
+        chatScroll=null; activeChatMessages=null; voiceStatusView=null; voiceParticipantsView=null;
+        voiceJoinButton=null; voiceMuteButton=null; voiceSpeakerButton=null; voiceLeaveButton=null;
+        if(tab.equals("聊天室")) { showChatScreen(); return; }
+        if(tab.equals("語音")) { showVoiceScreen(); return; }
+
+        body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(3),dp(10),dp(3),dp(18));
+        ScrollView pageScroll=new ScrollView(this); pageScroll.setFillViewport(true);
+        pageScroll.setVerticalScrollBarEnabled(false); pageScroll.addView(body);
         contentFrame.addView(pageScroll,new FrameLayout.LayoutParams(-1,-1));
+
         if(tab.equals("首頁")) {
-            addSpace(8);
-            TextView welcome=txt(userName.isEmpty()?"歡迎來到無垠":"歡迎回來，"+userName,25,WHITE,true); body.addView(welcome);
-            body.addView(txt("你的 Minecraft 社群入口",13,MUTED,false));
-            addSpace(20);
-            LinearLayout hero=panel(); hero.setPadding(dp(20),dp(21),dp(20),dp(21));
-            TextView eyebrow=txt("MINECRAFT COMMUNITY",10,MINT,true);
-            hero.addView(eyebrow); hero.addView(txt("一起打造無垠世界。",23,WHITE,true));
-            hero.addView(txt("聊天、公告與社群資訊都集中在這裡。",12,MUTED,false));
+            LinearLayout greeting=new LinearLayout(this); greeting.setGravity(Gravity.CENTER_VERTICAL);
+            LinearLayout greetingText=new LinearLayout(this); greetingText.setOrientation(LinearLayout.VERTICAL);
+            greetingText.addView(txt(session.isEmpty()?"歡迎來到無垠":"歡迎回來",12,MUTED,true));
+            TextView name=txt(session.isEmpty()?"探索你的社群入口":userName,23,WHITE,true);
+            name.setMaxLines(1); name.setEllipsize(android.text.TextUtils.TruncateAt.END); greetingText.addView(name);
+            greeting.addView(greetingText,new LinearLayout.LayoutParams(0,-2,1));
+            TextView avatar=txt(session.isEmpty()?"B":(userName.isEmpty()?"U":userName.substring(0,1).toUpperCase(Locale.getDefault())),18,BG,true);
+            avatar.setGravity(Gravity.CENTER); avatar.setBackground(gradient(MINT,ACCENT,dp(18)));
+            greeting.addView(avatar,new LinearLayout.LayoutParams(dp(46),dp(46))); body.addView(greeting);
+            addSpace(17);
+
+            LinearLayout hero=new LinearLayout(this); hero.setOrientation(LinearLayout.VERTICAL);
+            hero.setPadding(dp(20),dp(21),dp(20),dp(20));
+            hero.setBackground(gradient(Color.rgb(34,48,78),Color.rgb(39,35,76),dp(24)));
+            TextView eyebrow=txt("BOLS  /  COMMUNITY HUB",10,MINT,true); eyebrow.setLetterSpacing(0.12f); hero.addView(eyebrow);
+            addSpaceTo(hero,12); hero.addView(txt("把世界連在一起。",25,WHITE,true));
+            TextView heroSub=txt("聊天、語音與最新公告，都在你的掌握之中。",13,Color.rgb(204,213,238),false);
+            heroSub.setLineSpacing(dp(3),1.0f); LinearLayout.LayoutParams subLp=new LinearLayout.LayoutParams(-1,-2); subLp.topMargin=dp(7); hero.addView(heroSub,subLp);
+            LinearLayout footer=new LinearLayout(this); footer.setGravity(Gravity.CENTER_VERTICAL);
+            TextView tag=txt("✦  YOUR COMMUNITY",10,WHITE,true); tag.setPadding(dp(10),dp(7),dp(10),dp(7));
+            tag.setBackground(round(Color.argb(42,255,255,255),dp(30))); footer.addView(tag,new LinearLayout.LayoutParams(0,-2,1));
+            TextView mark=txt("BOLS",12,MINT,true); mark.setLetterSpacing(0.16f); footer.addView(mark);
+            LinearLayout.LayoutParams footerLp=new LinearLayout.LayoutParams(-1,-2); footerLp.topMargin=dp(20); hero.addView(footer,footerLp);
             body.addView(hero);
-            addSpace(16);
-            body.addView(txt("社群功能",16,WHITE,true)); addSpace(8);
-            addFeature("聊天室","與伺服器成員即時交流","▤",()->showTab("聊天室"));
-            addFeature("伺服器公告","查看更新與重要消息","♢",()->showTab("公告"));
-            addFeature("個人中心","管理帳號與通知設定","●",()->showTab("我的"));
-            addSpace(15);
+
+            addSpace(23); addSectionHeader("快速前往","QUICK ACCESS"); addSpace(10);
+            addFeature("聊天室","與成員即時交流","▤",()->showTab("聊天室"));
+            addFeature("語音大廳","加入語音，和朋友聊天","◉",()->showTab("語音"));
+            addFeature("伺服器公告","掌握更新與重要消息","◇",()->showTab("公告"));
             if(session.isEmpty()) {
-                Button login=button("使用 Google 登入"); body.addView(login);
-                login.setOnClickListener(v->startGoogleLogin());
-            } else body.addView(txt("目前已登入。",12,MINT,true));
-        } else if(tab.equals("聊天室")) {
-            body.addView(txt("聊天室",24,WHITE,true)); body.addView(txt("伺服器聊天頻道",12,MUTED,false)); addSpace(14);
-            if(session.isEmpty()) requireLogin();
-            else {
-                LinearLayout tools=new LinearLayout(this); tools.setGravity(Gravity.CENTER_VERTICAL);
-                TextView hint=txt("伺服器聊天",13,MUTED,false); tools.addView(hint,new LinearLayout.LayoutParams(0,-2,1));
-                Button refresh=button("重新整理"); tools.addView(refresh); body.addView(tools);
-                LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL);
-                body.addView(messages,new LinearLayout.LayoutParams(-1,0,1));
-                LinearLayout composer=new LinearLayout(this); composer.setGravity(Gravity.CENTER_VERTICAL);
-                EditText input=new EditText(this); input.setSingleLine(true); input.setTextColor(WHITE);
-                input.setHintTextColor(MUTED); input.setHint("輸入訊息…"); input.setTextSize(14);
-                input.setBackground(round(PANEL,dp(13))); input.setPadding(dp(12),dp(8),dp(12),dp(8));
-                composer.addView(input,new LinearLayout.LayoutParams(0,dp(48),1));
-                Button send=button("傳送"); LinearLayout.LayoutParams sendLp=new LinearLayout.LayoutParams(-2,dp(48)); sendLp.leftMargin=dp(8); composer.addView(send,sendLp);
-                LinearLayout.LayoutParams composerLp=new LinearLayout.LayoutParams(-1,-2); composerLp.topMargin=dp(8); body.addView(composer,composerLp);
-                refresh.setOnClickListener(v->loadChat("server",messages));
-                send.setOnClickListener(v->{String value=input.getText().toString().trim(); if(!value.isEmpty()){input.setText(""); postChat(value,messages);}});
-                loadChat("server",messages);
+                addSpace(8); LinearLayout loginCard=panel();
+                loginCard.addView(txt("登入後解鎖完整功能",16,WHITE,true));
+                loginCard.addView(txt("使用 Google 帳號登入，即可加入聊天室與語音大廳。",12,MUTED,false));
+                Button login=button("使用 Google 登入"); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48)); lp.topMargin=dp(12);
+                loginCard.addView(login,lp); login.setOnClickListener(v->startGoogleLogin()); body.addView(loginCard);
             }
         } else if(tab.equals("公告")) {
-            body.addView(txt("伺服器公告",24,WHITE,true)); body.addView(txt("更新、活動與重要通知",12,MUTED,false)); addSpace(14);
+            addSectionHeader("伺服器公告","NEWS & UPDATES");
+            TextView subtitle=txt("更新、活動與重要通知都會整理在這裡。",12,MUTED,false);
+            LinearLayout.LayoutParams subLp=new LinearLayout.LayoutParams(-1,-2); subLp.topMargin=dp(5); body.addView(subtitle,subLp);
+            addSpace(14);
             if(session.isEmpty()) requireLogin();
-            else {
-                LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL);
-                body.addView(messages,new LinearLayout.LayoutParams(-1,-1));
-                loadChat("announcement",messages);
-            }
+            else { LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); body.addView(messages,new LinearLayout.LayoutParams(-1,-1)); loadChat("announcement",messages); }
         } else {
-            body.addView(txt("個人中心",24,WHITE,true)); body.addView(txt("帳號與應用程式設定",12,MUTED,false)); addSpace(14);
-            LinearLayout p=panel();
-            p.addView(txt(userName.isEmpty()?"尚未登入":userName,18,WHITE,true));
-            p.addView(txt(session.isEmpty()?"登入後可使用聊天室與個人功能。":"已連結無垠伺服器帳號",12,MUTED,false));
-            Button action=button(session.isEmpty()?"使用 Google 登入":"登出"); p.addView(action);
-            action.setOnClickListener(v->{if(session.isEmpty())startGoogleLogin();else logout();});
-            Button pushCheck=button("通知診斷 / 重新註冊");
-            LinearLayout.LayoutParams pushCheckLp=new LinearLayout.LayoutParams(-1,dp(48));
-            pushCheckLp.topMargin=dp(10);
-            p.addView(pushCheck,pushCheckLp);
-            pushCheck.setOnClickListener(v->showPushDiagnostics());
-            body.addView(p);
+            addSectionHeader("個人中心","YOUR ACCOUNT");
+            TextView subtitle=txt("帳號、通知與應用程式設定。",12,MUTED,false);
+            LinearLayout.LayoutParams subLp=new LinearLayout.LayoutParams(-1,-2); subLp.topMargin=dp(5); body.addView(subtitle,subLp);
+            addSpace(16);
+            LinearLayout profile=panel(); profile.setPadding(dp(18),dp(18),dp(18),dp(18));
+            LinearLayout identity=new LinearLayout(this); identity.setGravity(Gravity.CENTER_VERTICAL);
+            TextView avatar=txt(session.isEmpty()?"?":(userName.isEmpty()?"U":userName.substring(0,1).toUpperCase(Locale.getDefault())),21,BG,true);
+            avatar.setGravity(Gravity.CENTER); avatar.setBackground(gradient(MINT,ACCENT,dp(19)));
+            identity.addView(avatar,new LinearLayout.LayoutParams(dp(54),dp(54)));
+            LinearLayout details=new LinearLayout(this); details.setOrientation(LinearLayout.VERTICAL); details.setPadding(dp(13),0,0,0);
+            details.addView(txt(session.isEmpty()?"尚未登入":userName,17,WHITE,true));
+            details.addView(txt(session.isEmpty()?"訪客帳號":"已連結無垠伺服器帳號",11,MUTED,false));
+            identity.addView(details,new LinearLayout.LayoutParams(0,-2,1)); profile.addView(identity);
+            Button action=button(session.isEmpty()?"使用 Google 登入":"登出帳號");
+            LinearLayout.LayoutParams actionLp=new LinearLayout.LayoutParams(-1,dp(48)); actionLp.topMargin=dp(17); profile.addView(action,actionLp);
+            action.setOnClickListener(v->{if(session.isEmpty())startGoogleLogin();else logout();}); body.addView(profile);
+
+            addSpace(18); addSectionHeader("應用程式","APP TOOLS"); addSpace(9);
+            LinearLayout diagnostic=panel(); diagnostic.setOrientation(LinearLayout.HORIZONTAL); diagnostic.setGravity(Gravity.CENTER_VERTICAL);
+            TextView bell=txt("♧",22,MINT,true); bell.setGravity(Gravity.CENTER); bell.setBackground(round(PANEL2,dp(13)));
+            diagnostic.addView(bell,new LinearLayout.LayoutParams(dp(44),dp(44)));
+            LinearLayout diagnosticText=new LinearLayout(this); diagnosticText.setOrientation(LinearLayout.VERTICAL); diagnosticText.setPadding(dp(12),0,dp(5),0);
+            diagnosticText.addView(txt("通知診斷",14,WHITE,true)); diagnosticText.addView(txt("檢查權限、Firebase 與裝置註冊",10,MUTED,false));
+            diagnostic.addView(diagnosticText,new LinearLayout.LayoutParams(0,-2,1)); diagnostic.addView(txt("›",25,MUTED,false));
+            diagnostic.setOnClickListener(v->showPushDiagnostics()); body.addView(diagnostic);
+            addSpace(10); body.addView(txt("提醒：推播仍需 Firebase 與 Worker 伺服器端設定完成才能送達。",11,MUTED,false));
         }
     }
 
-
     private void showChatScreen() {
-        LinearLayout screen = new LinearLayout(this);
-        screen.setOrientation(LinearLayout.VERTICAL);
-        contentFrame.addView(screen, new FrameLayout.LayoutParams(-1,-1));
-
-        screen.addView(txt("聊天室",24,WHITE,true));
-        screen.addView(txt("伺服器聊天頻道",12,MUTED,false));
-        View topGap = new View(this);
-        screen.addView(topGap,new LinearLayout.LayoutParams(1,dp(10)));
+        LinearLayout screen=new LinearLayout(this); screen.setOrientation(LinearLayout.VERTICAL);
+        screen.setPadding(dp(3),dp(8),dp(3),0); contentFrame.addView(screen,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout heading=new LinearLayout(this); heading.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titleBox=new LinearLayout(this); titleBox.setOrientation(LinearLayout.VERTICAL);
+        titleBox.addView(txt("聊天室",23,WHITE,true)); titleBox.addView(txt("與無垠社群成員即時交流",11,MUTED,false));
+        heading.addView(titleBox,new LinearLayout.LayoutParams(0,-2,1));
+        TextView live=txt("●  CHAT",10,MINT,true); live.setPadding(dp(10),dp(7),dp(10),dp(7)); live.setBackground(round(PANEL2,dp(30)));
+        heading.addView(live); screen.addView(heading); addSpaceTo(screen,13);
 
         if(session.isEmpty()) {
-            LinearLayout login = panel();
-            login.addView(txt("需要先登入",17,WHITE,true));
-            login.addView(txt("登入後即可使用伺服器聊天室。",12,MUTED,false));
-            Button loginButton = button("使用 Google 登入");
-            login.addView(loginButton);
-            loginButton.setOnClickListener(v->startGoogleLogin());
-            screen.addView(login,new LinearLayout.LayoutParams(-1,-2));
-            return;
+            LinearLayout login=panel(); login.addView(txt("加入對話",18,WHITE,true));
+            login.addView(txt("登入後即可閱讀訊息並與伺服器成員聊天。",12,MUTED,false));
+            Button loginButton=button("使用 Google 登入"); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48)); lp.topMargin=dp(14);
+            login.addView(loginButton,lp); loginButton.setOnClickListener(v->startGoogleLogin()); screen.addView(login); return;
         }
 
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        toolbar.addView(txt("伺服器聊天",13,MUTED,false),new LinearLayout.LayoutParams(0,-2,1));
-        Button refresh = button("重新整理");
-        toolbar.addView(refresh);
-        screen.addView(toolbar,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout toolbar=panel(); toolbar.setOrientation(LinearLayout.HORIZONTAL); toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.setPadding(dp(13),dp(9),dp(11),dp(9));
+        TextView channelIcon=txt("#",18,MINT,true); channelIcon.setGravity(Gravity.CENTER); channelIcon.setBackground(round(PANEL2,dp(10)));
+        toolbar.addView(channelIcon,new LinearLayout.LayoutParams(dp(34),dp(34)));
+        LinearLayout channelText=new LinearLayout(this); channelText.setOrientation(LinearLayout.VERTICAL); channelText.setPadding(dp(10),0,0,0);
+        channelText.addView(txt("伺服器聊天",12,WHITE,true)); channelText.addView(txt("公開頻道",10,MUTED,false));
+        toolbar.addView(channelText,new LinearLayout.LayoutParams(0,-2,1));
+        TextView refresh=txt("↻",22,MINT,true); refresh.setGravity(Gravity.CENTER); refresh.setBackground(round(PANEL2,dp(12)));
+        toolbar.addView(refresh,new LinearLayout.LayoutParams(dp(38),dp(38)));
+        LinearLayout.LayoutParams toolbarLp=new LinearLayout.LayoutParams(-1,-2); toolbarLp.bottomMargin=dp(9); screen.addView(toolbar,toolbarLp);
 
-        chatScroll = new ScrollView(this);
-        chatScroll.setFillViewport(true);
-        chatScroll.setSmoothScrollingEnabled(true);
-        chatScroll.setClipToPadding(false);
-        chatScroll.setPadding(0,dp(7),0,dp(7));
-
-        LinearLayout messages = new LinearLayout(this);
-        messages.setOrientation(LinearLayout.VERTICAL);
-        chatScroll.addView(messages,new ScrollView.LayoutParams(-1,-2));
-        activeChatMessages = messages;
+        chatScroll=new ScrollView(this); chatScroll.setFillViewport(false); chatScroll.setSmoothScrollingEnabled(true);
+        chatScroll.setClipToPadding(false); chatScroll.setVerticalScrollBarEnabled(false); chatScroll.setPadding(0,dp(4),0,dp(8));
+        LinearLayout messages=new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL);
+        chatScroll.addView(messages,new ScrollView.LayoutParams(-1,-2)); activeChatMessages=messages;
         screen.addView(chatScroll,new LinearLayout.LayoutParams(-1,0,1));
 
-        LinearLayout composer = new LinearLayout(this);
-        composer.setGravity(Gravity.CENTER_VERTICAL);
-        EditText input = new EditText(this);
-        input.setSingleLine(true);
-        input.setTextColor(WHITE);
-        input.setHintTextColor(MUTED);
-        input.setHint("輸入訊息…");
-        input.setTextSize(14);
-        input.setBackground(round(PANEL,dp(13)));
-        input.setPadding(dp(12),dp(8),dp(12),dp(8));
-        composer.addView(input,new LinearLayout.LayoutParams(0,dp(48),1));
-        Button send = button("傳送");
-        LinearLayout.LayoutParams sendLp = new LinearLayout.LayoutParams(-2,dp(48));
-        sendLp.leftMargin = dp(8);
-        composer.addView(send,sendLp);
-        LinearLayout.LayoutParams composerLp = new LinearLayout.LayoutParams(-1,-2);
-        composerLp.topMargin = dp(8);
-        screen.addView(composer,composerLp);
+        LinearLayout composer=panel(); composer.setOrientation(LinearLayout.HORIZONTAL); composer.setGravity(Gravity.CENTER_VERTICAL);
+        composer.setPadding(dp(9),dp(8),dp(8),dp(8));
+        EditText input=new EditText(this); input.setSingleLine(true); input.setTextColor(WHITE); input.setHintTextColor(MUTED);
+        input.setHint("傳送訊息給大家…"); input.setTextSize(14); input.setBackgroundColor(Color.TRANSPARENT);
+        input.setPadding(dp(9),0,dp(8),0); input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
+        composer.addView(input,new LinearLayout.LayoutParams(0,dp(46),1));
+        TextView send=txt("➤",18,BG,true); send.setGravity(Gravity.CENTER); send.setBackground(gradient(MINT,Color.rgb(92,198,220),dp(15)));
+        composer.addView(send,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout.LayoutParams composerLp=new LinearLayout.LayoutParams(-1,-2); composerLp.topMargin=dp(8); composerLp.bottomMargin=dp(5); screen.addView(composer,composerLp);
 
         refresh.setOnClickListener(v->loadChat("server",messages));
-        send.setOnClickListener(v->{
-            String value = input.getText().toString().trim();
-            if(!value.isEmpty()) {
-                input.setText("");
-                postChat(value,messages);
-            }
-        });
+        View.OnClickListener sendAction=v->{String value=input.getText().toString().trim(); if(!value.isEmpty()){input.setText("");postChat(value,messages);}};
+        send.setOnClickListener(sendAction);
+        input.setOnEditorActionListener((v,actionId,event)->{if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendAction.onClick(send);return true;}return false;});
         loadChat("server",messages);
     }
 
@@ -342,69 +322,47 @@ public class MainActivity extends Activity {
     }
 
     private void showVoiceScreen() {
-        LinearLayout screen = new LinearLayout(this);
-        screen.setOrientation(LinearLayout.VERTICAL);
-        contentFrame.addView(screen,new FrameLayout.LayoutParams(-1,-1));
-
-        screen.addView(txt("語音頻道",24,WHITE,true));
-        screen.addView(txt("加入大廳，與在線成員即時通話",12,MUTED,false));
-        View topGap = new View(this);
-        screen.addView(topGap,new LinearLayout.LayoutParams(1,dp(12)));
+        ScrollView page=new ScrollView(this); page.setFillViewport(true); page.setVerticalScrollBarEnabled(false);
+        LinearLayout screen=new LinearLayout(this); screen.setOrientation(LinearLayout.VERTICAL); screen.setPadding(dp(3),dp(9),dp(3),dp(18));
+        page.addView(screen); contentFrame.addView(page,new FrameLayout.LayoutParams(-1,-1));
+        screen.addView(txt("語音大廳",23,WHITE,true)); screen.addView(txt("與朋友即時通話，保持連線。",11,MUTED,false)); addSpaceTo(screen,15);
 
         if(session.isEmpty()) {
-            LinearLayout login = panel();
-            login.addView(txt("需要先登入",17,WHITE,true));
-            login.addView(txt("登入後即可加入語音大廳。",12,MUTED,false));
-            Button loginButton = button("使用 Google 登入");
-            login.addView(loginButton);
-            loginButton.setOnClickListener(v->startGoogleLogin());
-            screen.addView(login,new LinearLayout.LayoutParams(-1,-2));
-            return;
+            LinearLayout login=panel(); login.addView(txt("加入語音大廳",18,WHITE,true));
+            login.addView(txt("登入後即可加入頻道，與其他成員通話。",12,MUTED,false));
+            Button loginButton=button("使用 Google 登入"); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48)); lp.topMargin=dp(14);
+            login.addView(loginButton,lp); loginButton.setOnClickListener(v->startGoogleLogin()); screen.addView(login); return;
         }
 
-        LinearLayout statusCard = panel();
-        statusCard.addView(txt("大廳語音",14,WHITE,true));
-        voiceStatusView = txt(voiceStatusMessage,12,MINT,false);
-        statusCard.addView(voiceStatusView);
-        screen.addView(statusCard,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout stage=new LinearLayout(this); stage.setOrientation(LinearLayout.VERTICAL); stage.setGravity(Gravity.CENTER);
+        stage.setPadding(dp(20),dp(23),dp(20),dp(22)); stage.setBackground(gradient(Color.rgb(35,51,79),Color.rgb(43,37,78),dp(24)));
+        TextView mic=txt("◉",34,MINT,true); mic.setGravity(Gravity.CENTER); mic.setBackground(round(Color.argb(38,111,231,218),dp(28)));
+        stage.addView(mic,new LinearLayout.LayoutParams(dp(78),dp(78)));
+        TextView stageTitle=txt("無垠語音頻道",19,WHITE,true); LinearLayout.LayoutParams titleLp=new LinearLayout.LayoutParams(-2,-2); titleLp.topMargin=dp(14); stage.addView(stageTitle,titleLp);
+        voiceStatusView=txt(voiceStatusMessage,12,Color.rgb(208,220,243),false); voiceStatusView.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams statusLp=new LinearLayout.LayoutParams(-1,-2); statusLp.topMargin=dp(5); stage.addView(voiceStatusView,statusLp);
+        screen.addView(stage); addSpaceTo(screen,12);
+        voiceJoinButton=button("加入語音大廳"); screen.addView(voiceJoinButton,new LinearLayout.LayoutParams(-1,dp(52)));
 
-        View gap = new View(this);
-        screen.addView(gap,new LinearLayout.LayoutParams(1,dp(10)));
+        LinearLayout controls=new LinearLayout(this); controls.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams controlsLp=new LinearLayout.LayoutParams(-1,-2); controlsLp.topMargin=dp(9); screen.addView(controls,controlsLp);
+        voiceMuteButton=secondaryButton(voiceMuted?"取消靜音":"麥克風靜音");
+        voiceSpeakerButton=secondaryButton(speakerEnabled?"喇叭開啟":"喇叭關閉"); voiceLeaveButton=secondaryButton("離開頻道");
+        LinearLayout.LayoutParams c1=new LinearLayout.LayoutParams(0,dp(46),1); c1.setMargins(0,0,dp(5),0); controls.addView(voiceMuteButton,c1);
+        LinearLayout.LayoutParams c2=new LinearLayout.LayoutParams(0,dp(46),1); c2.setMargins(dp(2),0,dp(2),0); controls.addView(voiceSpeakerButton,c2);
+        LinearLayout.LayoutParams c3=new LinearLayout.LayoutParams(0,dp(46),1); c3.setMargins(dp(5),0,0,0); controls.addView(voiceLeaveButton,c3);
 
-        LinearLayout controls = new LinearLayout(this);
-        controls.setGravity(Gravity.CENTER_VERTICAL);
-        voiceJoinButton = button("加入語音");
-        voiceMuteButton = button(voiceMuted ? "取消靜音" : "麥克風靜音");
-        voiceSpeakerButton = button(speakerEnabled ? "🔊 喇叭開" : "🔈 喇叭關");
-        voiceLeaveButton = button("離開");
-
-        LinearLayout.LayoutParams a = new LinearLayout.LayoutParams(0,dp(48),1);
-        a.setMargins(0,0,dp(4),0);
-        controls.addView(voiceJoinButton,a);
-        LinearLayout.LayoutParams b = new LinearLayout.LayoutParams(0,dp(48),1);
-        b.setMargins(dp(2),0,dp(2),0);
-        controls.addView(voiceMuteButton,b);
-        controls.addView(voiceSpeakerButton,b);
-        LinearLayout.LayoutParams c = new LinearLayout.LayoutParams(0,dp(48),1);
-        c.setMargins(dp(4),0,0,0);
-        controls.addView(voiceLeaveButton,c);
-        screen.addView(controls,new LinearLayout.LayoutParams(-1,-2));
-
-        View gap2 = new View(this);
-        screen.addView(gap2,new LinearLayout.LayoutParams(1,dp(12)));
-        LinearLayout participants = panel();
-        participants.addView(txt("語音成員",15,WHITE,true));
-        voiceParticipantsView = txt("",12,MUTED,false);
-        voiceParticipantsView.setPadding(0,dp(8),0,0);
-        participants.addView(voiceParticipantsView);
-        screen.addView(participants,new LinearLayout.LayoutParams(-1,-2));
+        addSpaceTo(screen,17);
+        LinearLayout participants=panel(); LinearLayout header=new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(txt("頻道成員",15,WHITE,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView badge=txt("VOICE ROOM",9,MINT,true); badge.setPadding(dp(8),dp(6),dp(8),dp(6)); badge.setBackground(round(PANEL2,dp(20))); header.addView(badge);
+        participants.addView(header); voiceParticipantsView=txt("",12,MUTED,false);
+        voiceParticipantsView.setPadding(0,dp(12),0,0); voiceParticipantsView.setLineSpacing(dp(4),1.0f); participants.addView(voiceParticipantsView);
+        screen.addView(participants);
 
         voiceJoinButton.setOnClickListener(v->requestVoicePermissionAndJoin());
-        voiceMuteButton.setOnClickListener(v->toggleVoiceMute());
-        voiceSpeakerButton.setOnClickListener(v->toggleSpeaker());
-        voiceLeaveButton.setOnClickListener(v->leaveVoice());
-        updateVoiceUi();
-        updateVoiceParticipants();
+        voiceMuteButton.setOnClickListener(v->toggleVoiceMute()); voiceSpeakerButton.setOnClickListener(v->toggleSpeaker()); voiceLeaveButton.setOnClickListener(v->leaveVoice());
+        updateVoiceUi(); updateVoiceParticipants();
     }
 
     private void requestVoicePermissionAndJoin() {
@@ -848,22 +806,31 @@ public class MainActivity extends Activity {
         @Override public void onSetFailure(String error) {}
     }
 
+    private void addSectionHeader(String title,String eyebrow) {
+        LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(txt(title,17,WHITE,true),new LinearLayout.LayoutParams(0,-2,1));
+        TextView label=txt(eyebrow,9,MUTED,true); label.setLetterSpacing(0.10f); row.addView(label); body.addView(row);
+    }
+
     private void addFeature(String title,String desc,String symbol,Runnable click) {
         LinearLayout card=panel(); card.setOrientation(LinearLayout.HORIZONTAL); card.setGravity(Gravity.CENTER_VERTICAL);
-        TextView icon=txt(symbol,23,MINT,true); icon.setGravity(Gravity.CENTER); icon.setBackground(round(PANEL2,dp(14)));
-        card.addView(icon,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        LinearLayout words=new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL); words.setPadding(dp(12),0,0,0);
-        words.addView(txt(title,15,WHITE,true)); words.addView(txt(desc,11,MUTED,false));
-        card.addView(words,new LinearLayout.LayoutParams(0,-2,1));
-        TextView arrow=txt("›",25,MUTED,false); card.addView(arrow);
+        card.setPadding(dp(13),dp(13),dp(14),dp(13));
+        TextView icon=txt(symbol,22,MINT,true); icon.setGravity(Gravity.CENTER); icon.setBackground(round(PANEL2,dp(14)));
+        card.addView(icon,new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout words=new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL); words.setPadding(dp(13),0,dp(7),0);
+        words.addView(txt(title,14,WHITE,true)); TextView description=txt(desc,11,MUTED,false);
+        LinearLayout.LayoutParams descLp=new LinearLayout.LayoutParams(-1,-2); descLp.topMargin=dp(3); words.addView(description,descLp);
+        card.addView(words,new LinearLayout.LayoutParams(0,-2,1)); card.addView(txt("›",26,MUTED,false));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.bottomMargin=dp(9); body.addView(card,lp);
         card.setOnClickListener(v->click.run());
     }
 
     private void requireLogin() {
         LinearLayout p=panel(); p.addView(txt("需要先登入",17,WHITE,true));
-        p.addView(txt("登入後即可使用這項社群功能。",12,MUTED,false));
-        Button b=button("使用 Google 登入"); p.addView(b); b.setOnClickListener(v->startGoogleLogin()); body.addView(p);
+        TextView message=txt("登入後即可使用這項社群功能。",12,MUTED,false);
+        LinearLayout.LayoutParams messageLp=new LinearLayout.LayoutParams(-1,-2); messageLp.topMargin=dp(5); p.addView(message,messageLp);
+        Button b=button("使用 Google 登入"); LinearLayout.LayoutParams buttonLp=new LinearLayout.LayoutParams(-1,dp(48));
+        buttonLp.topMargin=dp(13); p.addView(b,buttonLp); b.setOnClickListener(v->startGoogleLogin()); body.addView(p);
     }
 
     private void startGoogleLogin() {
@@ -1055,16 +1022,26 @@ public class MainActivity extends Activity {
                         JSONObject m=items.optJSONObject(i); if(m==null)continue;
                         JSONObject u=m.optJSONObject("user"); String who=u==null?"玩家":u.optString("name","玩家");
                         String message=m.optString("text","");
-                        LinearLayout card=panel(); card.addView(txt(who,12,MINT,true));
-                        TextView messageView = txt(message,14,WHITE,false);
-                        // Convert URLs in chat messages into tappable links.
-                        Linkify.addLinks(messageView,Linkify.WEB_URLS);
-                        messageView.setMovementMethod(LinkMovementMethod.getInstance());
-                        messageView.setLinkTextColor(MINT);
-                        card.addView(messageView);
+                        boolean mine=!userName.isEmpty() && who.equalsIgnoreCase(userName);
+                        LinearLayout card=panel(); card.setPadding(dp(13),dp(12),dp(13),dp(12));
+                        card.setBackground(outline(mine?Color.rgb(26,43,59):PANEL,mine?Color.rgb(66,112,124):BORDER,dp(17)));
+                        LinearLayout messageHeader=new LinearLayout(this); messageHeader.setGravity(Gravity.CENTER_VERTICAL);
+                        TextView avatar=txt(who.isEmpty()?"?":who.substring(0,1).toUpperCase(Locale.getDefault()),13,BG,true);
+                        avatar.setGravity(Gravity.CENTER); avatar.setBackground(round(mine?MINT:ACCENT,dp(12)));
+                        messageHeader.addView(avatar,new LinearLayout.LayoutParams(dp(32),dp(32)));
+                        LinearLayout authorBox=new LinearLayout(this); authorBox.setOrientation(LinearLayout.VERTICAL); authorBox.setPadding(dp(9),0,0,0);
+                        authorBox.addView(txt(who,12,WHITE,true));
                         long time=m.optLong("createdAt",0);
-                        if(time>0)card.addView(txt(new SimpleDateFormat("MM/dd HH:mm",Locale.getDefault()).format(new Date(time)),10,MUTED,false));
-                        target.addView(card);
+                        String timeText=time>0?new SimpleDateFormat("MM/dd  HH:mm",Locale.getDefault()).format(new Date(time)):"";
+                        authorBox.addView(txt(timeText,9,MUTED,false));
+                        messageHeader.addView(authorBox,new LinearLayout.LayoutParams(0,-2,1));
+                        if(mine) { TextView ownTag=txt("你",9,MINT,true); ownTag.setPadding(dp(8),dp(5),dp(8),dp(5)); ownTag.setBackground(round(PANEL2,dp(20))); messageHeader.addView(ownTag); }
+                        card.addView(messageHeader);
+                        TextView messageView=txt(message,14,WHITE,false); messageView.setLineSpacing(dp(3),1.0f);
+                        messageView.setTextIsSelectable(true); Linkify.addLinks(messageView,Linkify.WEB_URLS);
+                        messageView.setMovementMethod(LinkMovementMethod.getInstance()); messageView.setLinkTextColor(MINT);
+                        LinearLayout.LayoutParams messageLp=new LinearLayout.LayoutParams(-1,-2); messageLp.topMargin=dp(10); card.addView(messageView,messageLp);
+                        LinearLayout.LayoutParams cardLp=new LinearLayout.LayoutParams(-1,-2); cardLp.bottomMargin=dp(9); target.addView(card,cardLp);
                     }
                     scrollChatToBottom(target);
                 });
@@ -1139,19 +1116,41 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout panel() {
-        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(16),dp(15),dp(16),dp(15));
-        p.setBackground(round(PANEL,dp(19))); return p;
+        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL);
+        p.setPadding(dp(16),dp(15),dp(16),dp(15)); p.setBackground(outline(PANEL,BORDER,dp(20))); return p;
     }
+
     private TextView txt(String s,int size,int color,boolean bold) {
-        TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color);
+        TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color); t.setIncludeFontPadding(false);
         if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setPadding(0,dp(2),0,dp(2)); return t;
     }
+
     private Button button(String s) {
         Button b=new Button(this); b.setText(s); b.setTextColor(BG); b.setAllCaps(false); b.setTextSize(14);
-        b.setBackground(round(MINT,dp(14))); return b;
+        b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); b.setGravity(Gravity.CENTER); b.setMinHeight(dp(46));
+        b.setPadding(dp(16),0,dp(16),0); b.setBackground(gradient(MINT,Color.rgb(91,193,218),dp(14))); b.setElevation(dp(2)); return b;
     }
-    private GradientDrawable round(int color,int radius) { GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(radius); return d; }
+
+    private Button secondaryButton(String s) {
+        Button b=new Button(this); b.setText(s); b.setTextColor(WHITE); b.setAllCaps(false); b.setTextSize(11);
+        b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); b.setGravity(Gravity.CENTER); b.setMinHeight(dp(44));
+        b.setPadding(dp(5),0,dp(5),0); b.setBackground(outline(PANEL2,BORDER,dp(13))); return b;
+    }
+
+    private GradientDrawable round(int color,int radius) {
+        GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(radius); return d;
+    }
+
+    private GradientDrawable gradient(int start,int end,int radius) {
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{start,end}); d.setCornerRadius(radius); return d;
+    }
+
+    private GradientDrawable outline(int color,int stroke,int radius) {
+        GradientDrawable d=round(color,radius); d.setStroke(dp(1),stroke); return d;
+    }
+
     private void addSpace(int h) { View v=new View(this); body.addView(v,new LinearLayout.LayoutParams(1,dp(h))); }
+    private void addSpaceTo(LinearLayout target,int h) { View v=new View(this); target.addView(v,new LinearLayout.LayoutParams(1,dp(h))); }
     private int dp(float v) { return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
     private void askNotificationPermission() {
