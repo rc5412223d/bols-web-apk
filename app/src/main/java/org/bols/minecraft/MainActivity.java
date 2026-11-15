@@ -779,14 +779,14 @@ public class MainActivity extends Activity {
             if(voiceStatusView!=null) voiceStatusView.setText(voiceStatusMessage);
             if(voiceJoinButton!=null) {
                 voiceJoinButton.setEnabled(!voiceJoined && !voiceConnecting);
-                voiceJoinButton.setText(voiceConnecting?"連線中…":(voiceJoined?"已加入":"加入語音"));
+                voiceJoinButton.setText(voiceConnecting?"連線中…":(voiceJoined?"已加入":"加入語音大廳"));
             }
             if(voiceMuteButton!=null) {
                 voiceMuteButton.setEnabled(voiceJoined);
                 voiceMuteButton.setText(voiceMuted?"取消靜音":"麥克風靜音");
             }
             if(voiceSpeakerButton!=null) {
-                voiceSpeakerButton.setText(speakerEnabled?"🔊 喇叭開":"🔈 喇叭關");
+                voiceSpeakerButton.setText(speakerEnabled?"喇叭開啟":"喇叭關閉");
             }
             if(voiceLeaveButton!=null) voiceLeaveButton.setEnabled(voiceJoined || voiceConnecting);
         });
